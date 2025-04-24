@@ -1,4 +1,4 @@
-const { validateLogin, validateRegister } = require("../middleware/validators/AuthValidator");
+const { validateLogin, validateRegister } = require("../middleware/validators/authValidators");
 const { Login, Register } = require("../services/AuthService");
 
 

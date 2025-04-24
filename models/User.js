@@ -1,51 +1,39 @@
-const bcrypt = require('bcrypt');
-const { ObjectId } = require('mongodb');
+const mongoose = require('mongoose');
 
-class User {
-    constructor(db) {
-        this.collection = db.collection('users');
-    }
+const userSchema = new mongoose.Schema({
+  phone: {
+    type: String,
+    required: true,
+    unique: true,
+    match: [/^\d{10}$/, 'Please provide a valid 10-digit phone number'],
+  },
+  userName: {
+    type: String,
+    required: true,
+    trim: true,
+    minlength: 3,
+  },
+  password: {
+    type: String,
+    required: true,
+    minlength: 6,
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
+    match: [/^\S+@\S+\.\S+$/, 'Please use a valid email address'],
+  },
+}, {
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+});
 
-    async create(userData) {
-        const hashedPassword = await bcrypt.hash(userData.password, 10);
-        const user = {
-            email: userData.email,
-            userName: userData.userName,
-            phone: userData.phone,
-            password: hashedPassword,
-            createdAt: new Date(),
-            updatedAt: new Date()
-        };
+userSchema.virtual('id').get(function () {
+  return this._id.toHexString();
+});
 
-        const result = await this.collection.insertOne(user);
-        return { ...user, _id: result.insertedId };
-    }
-
-    async findByEmail(email) {
-        return await this.collection.findOne({ email });
-    }
-
-    async findById(id) {
-        return await this.collection.findOne({ _id: new ObjectId(id) });
-    }
-
-    async update(id, updateData) {
-        const update = { $set: { ...updateData, updatedAt: new Date() } };
-        
-        if (updateData.password) {
-            update.$set.password = await bcrypt.hash(updateData.password, 10);
-        }
-
-        return await this.collection.findOneAndUpdate(
-            { _id: new ObjectId(id) },
-            update,
-            { returnDocument: 'after' }
-        );
-    }
-
-    async comparePassword(plainPassword, hashedPassword) {
-        return await bcrypt.compare(plainPassword, hashedPassword);
-    }
-}
-
-module.exports = User; 
+module.exports = mongoose.model('User', userSchema);

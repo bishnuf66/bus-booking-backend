@@ -3,173 +3,88 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const saltRounds = 10;
 
-class AuthService {
-    constructor(db) {
-        this.userModel = new User(db);
-    }
-
-    async register(registerData) {
+// User Register
+module.exports.Register = (registerData) => {
+    return new Promise(async (resolve, reject) => {
         try {
-            // Check if user already exists
-            const existingUser = await this.userModel.findByEmail(registerData.email);
+            // Check if email already exists
+            const existingUser = await User.findOne({ email: registerData.email });
             if (existingUser) {
-                return {
+                return resolve({
                     message: "Email already exists",
-                    success: false
-                };
+                    success: false,
+                });
             }
 
             const hashedPass = await bcrypt.hash(registerData.password, saltRounds);
 
-            const user = await this.userModel.create({
+            const newUser = new User({
                 email: registerData.email,
                 userName: registerData.userName,
-                phone: registerData.phone,
                 password: hashedPass,
+                phone: registerData.phone, // Must be unique
             });
 
-            return {
+            await newUser.save();
+
+            resolve({
                 message: "User created successfully",
                 success: true,
-                data: {
-                    id: user._id,
-                    email: user.email,
-                    userName: user.userName,
-                    phone: user.phone,
-                    createdAt: user.createdAt
-                }
-            };
+                data: newUser,
+            });
         } catch (error) {
-            console.error("Registration error:", error);
-            throw {
+            console.error("Register error:", error);
+            reject({
                 message: "Internal Server Error",
-                success: false
-            };
+                success: false,
+            });
         }
-    }
+    });
+};
 
-    async login(loginData) {
+// User Login
+module.exports.Login = (loginData) => {
+    return new Promise(async (resolve, reject) => {
         try {
-            const user = await this.userModel.findByEmail(loginData.email);
-            
+            const user = await User.findOne({ email: loginData.email });
+
             if (!user) {
-                return {
+                return resolve({
                     message: "Invalid email",
-                    success: false
-                };
+                    success: false,
+                });
             }
 
-            const passwordMatch = await this.userModel.comparePassword(loginData.password, user.password);
+            const passwordMatch = await bcrypt.compare(loginData.password, user.password);
+
             if (!passwordMatch) {
-                return {
+                return resolve({
                     message: "Invalid password",
-                    success: false
-                };
+                    success: false,
+                });
             }
 
             const token = jwt.sign(
-                { 
-                    email: user.email, 
-                    id: user._id, 
-                    userName: user.userName 
+                {
+                    email: user.email,
+                    id: user._id,
+                    userName: user.userName,
                 },
-                process.env.JWT_SECRET,
+                process.env.SECRET_KEY,
                 { expiresIn: "24h" }
             );
 
-            return {
+            resolve({
                 message: "Login successful",
-                token: token,
+                token,
                 success: true,
-                user: {
-                    id: user._id,
-                    email: user.email,
-                    userName: user.userName,
-                    phone: user.phone
-                }
-            };
-
+            });
         } catch (error) {
             console.error("Login error:", error);
-            throw {  
+            reject({
                 message: "Internal Server Error",
-                success: false
-            };
+                success: false,
+            });
         }
-    }
-
-    async getProfile(userId) {
-        try {
-            const user = await this.userModel.findById(userId);
-            
-            if (!user) {
-                return {
-                    message: "User not found",
-                    success: false
-                };
-            }
-
-            // Remove password from user object
-            const { password, ...userWithoutPassword } = user;
-
-            return {
-                message: "Profile retrieved successfully",
-                success: true,
-                data: userWithoutPassword
-            };
-
-        } catch (error) {
-            console.error("Get profile error:", error);
-            throw {  
-                message: "Internal Server Error",
-                success: false
-            };
-        }
-    }
-
-    async updateProfile(userId, updateData) {
-        try {
-            const user = await this.userModel.findById(userId);
-            
-            if (!user) {
-                return {
-                    message: "User not found",
-                    success: false
-                };
-            }
-
-            // Update allowed fields
-            if (updateData.userName) user.userName = updateData.userName;
-            if (updateData.phone) user.phone = updateData.phone;
-            
-            // If password is being updated
-            if (updateData.password) {
-                const hashedPass = await bcrypt.hash(updateData.password, saltRounds);
-                user.password = hashedPass;
-            }
-
-            const updatedUser = await this.userModel.update(userId, user);
-
-            return {
-                message: "Profile updated successfully",
-                success: true,
-                data: {
-                    id: updatedUser._id,
-                    email: updatedUser.email,
-                    userName: updatedUser.userName,
-                    phone: updatedUser.phone,
-                    updatedAt: updatedUser.updatedAt
-                }
-            };
-
-        } catch (error) {
-            console.error("Update profile error:", error);
-            throw {  
-                message: "Internal Server Error",
-                success: false
-            };
-        }
-    }
-}
-
-module.exports = AuthService;
+    });
+};

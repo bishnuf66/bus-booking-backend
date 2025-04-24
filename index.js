@@ -1,8 +1,10 @@
 // server.js
 const express = require('express');
 const connectDB = require('./db');
-const bookingRoutes = require('./routes/bookingRoutes');
 const cors = require('cors');
+const bookingRoutes = require('./routes/bookingRoutes');
+const authRoutes = require('./routes/AuthRoute');
+
 
 const app = express();
 const PORT = 8000;
@@ -14,6 +16,7 @@ app.use(express.json());
 
 // Routes
 app.use( bookingRoutes);
+app.use(authRoutes);
 
 // Start Server
 connectDB().then(() => {
