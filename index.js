@@ -1,6 +1,5 @@
-// server.js
 const express = require('express');
-const connectDB = require('./db');
+const connectDB = require('./database/db');
 const cors = require('cors');
 const bookingRoutes = require('./routes/bookingRoutes');
 const authRoutes = require('./routes/AuthRoute');

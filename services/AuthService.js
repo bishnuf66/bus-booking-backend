@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const User = require('../database/models/User');
 const saltRounds = 10;
 
 // User Register
@@ -17,7 +17,6 @@ module.exports.Register = (registerData) => {
             }
 
             const hashedPass = await bcrypt.hash(registerData.password, saltRounds);
-
             const newUser = new User({
                 email: registerData.email,
                 userName: registerData.userName,
@@ -47,18 +46,16 @@ module.exports.Login = (loginData) => {
     return new Promise(async (resolve, reject) => {
         try {
             const user = await User.findOne({ email: loginData.email });
-
             if (!user) {
-                return resolve({
+                return reject({
                     message: "Invalid email",
                     success: false,
                 });
             }
-
             const passwordMatch = await bcrypt.compare(loginData.password, user.password);
 
             if (!passwordMatch) {
-                return resolve({
+                return reject({
                     message: "Invalid password",
                     success: false,
                 });
